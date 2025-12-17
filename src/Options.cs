@@ -4,6 +4,7 @@ class Options
     {
         Options opts = new Options();
         bool output = false;
+        bool resize = false;
         foreach (string arg in args)
         {
             if (arg.StartsWith("-"))
@@ -13,15 +14,28 @@ class Options
                     char flagChar = arg[1];
                     switch (flagChar)
                     {
+                        case 'g':
+                            opts.AsGPL = true;
+                            opts.Print = false;
+                            break;
                         case 'h':
-                            opts.PrintHistogram = true;
+                            opts.HistogramOnly = true;
                             break;
                         case 'i':
                             opts.PrintImage = true;
+                            opts.Print = false;
                             break;
                         case 'o':
                             output = true;
+                            opts.Print = false;
                             break;
+                        case 'r':
+                            resize = true;
+                            break;
+                        case 'v':
+                            opts.Verbose = true;
+                            break;
+
                     }
                 }
             }
@@ -32,6 +46,11 @@ class Options
                 {
                     opts.OutputFile = arg;
                     output = false;
+                }
+                else if (resize)
+                {
+                    opts.ResizePercentage = double.Parse(arg);
+                    resize = false;
                 }
                 else if (string.IsNullOrEmpty(opts.InputFile))
                 {
@@ -51,20 +70,33 @@ class Options
 
     public Options()
     {
+        mInvalidArg = "";
+
+        AsGPL = false;
         InputFile = "";
         OutputFile = "";
-        PrintHistogram = false;
+        HistogramOnly = false;
+        Print = true;
         PrintImage = false;
-        mInvalidArg = "";
+        ResizePercentage = 100;
+        Verbose = false;
     }
+
+    public bool AsGPL { get; set; }
 
     public string InputFile { get; set; }
 
     public string OutputFile { get; set; }
 
+    public bool HistogramOnly { get; set; }
+
     public string InvalidArg => mInvalidArg;
 
-    public bool PrintHistogram { get; set; }
+    public bool Print { get; set; }
 
     public bool PrintImage { get; set; }
+
+    public double ResizePercentage { get; set; }
+    
+    public bool Verbose { get; set; }
 }

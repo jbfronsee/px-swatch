@@ -1,103 +1,96 @@
-﻿using System.Drawing;
-using ImageMagick;
-using ImageMagick.Colors;
-using ImageMagick.Drawing;
+﻿using ImageMagick;
 
 internal class Program
 {
-    private static void Main(string[] args)
+    public static void GeneratePalette(Options opts, MagickImage inputImage)
     {
-        Options opts = Options.GetOptions(args);
+        if(opts.ResizePercentage < 100 && opts.ResizePercentage > 0)
+        {
+            inputImage.Resize(new Percentage(opts.ResizePercentage));
+        }
 
+        List<IMagickColor<byte>> palette = Palette.PaletteFromImage(inputImage);
+
+        if (!opts.HistogramOnly)
+        {
+            palette = Palette.PaletteFromImageKmeans(inputImage, palette);
+        }
+
+        if (opts.Print)
+        {
+            Console.WriteLine("Palette: ");
+            foreach(IMagickColor<byte> color in palette)
+            {
+                Console.WriteLine($"Color: {color.ToHexString()}");
+            }
+        }
+        else if (opts.AsGPL)
+        {
+            List<string> file = Format.AsGPL(palette, Path.GetFileNameWithoutExtension(opts.OutputFile));
+            File.WriteAllLines(opts.OutputFile, file);
+        }
+        else
+        {
+            MagickImage paletteImage = Format.AsPNG(palette);
+
+            if (opts.PrintImage)
+            {
+                paletteImage.Write(Console.OpenStandardOutput());
+            }
+            else
+            {
+                paletteImage.Write(opts.OutputFile);
+            }
+        }
+    }
+
+    public static bool HasErrors(Options opts)
+    {
+        bool hasErrors = false;
         if (string.IsNullOrEmpty(opts.InputFile))
         {
-            Console.WriteLine("Usage: PaletteGen [InputFile] [flags]");
-            return;
+            Console.WriteLine("Usage: px-swatch [InputFile] [flags]");
+            hasErrors = true;
+        }
+        else if (opts.Print == false && opts.PrintImage == false && string.IsNullOrEmpty(opts.OutputFile))
+        {
+            Console.WriteLine("Missing output file specified with -o [filepath]");
+            hasErrors = true;
         }
         else if (!string.IsNullOrEmpty(opts.InvalidArg))
         {
             Console.WriteLine($"Invalid Argument: {opts.InvalidArg}");
+            hasErrors = true;
+        }
+
+        return hasErrors;
+    }
+
+    private static void Main(string[] args)
+    {
+        Options opts = Options.GetOptions(args);
+
+        if (HasErrors(opts))
+        {
             return;
         }
-        
-        //Console.WriteLine("Processing Image...");
 
         var inputImage = new MagickImage(opts.InputFile);
 
-        if (opts.PrintHistogram)
+        if (opts.Print || opts.Verbose)
+        {
+            Console.WriteLine("Processing Image...");
+        }
+
+        if (opts.Verbose)
         {
             var histogram = inputImage.Histogram();
             foreach (var color in histogram)
             {
                 Console.WriteLine($"Color: {color.Key} Occurences: {color.Value}");
             }
-
-            return;
         }
 
-        // if(inputImage.Width > 1080 || inputImage.Height > 1080)
-        // {
-        //     inputImage.Resize(new Percentage(75));
-        // }
-
-        List<IMagickColor<byte>> palette = Palette.PaletteFromImage(inputImage);
-
-        palette = Palette.PaletteFromImageKmeans(inputImage, palette);
-        //Console.WriteLine($"new hist {newHist.Count}");
-
-        // Console.WriteLine("Palette: ");
-        // foreach(string item in palette)
-        // {
-        //     Console.WriteLine($"Color: {item}");
-        // }
-
-
-        List<string> gplLines = new List<string>
-        {
-            "GIMP Palette",
-            "Name: Test",
-            $"Columns: {palette.Count}",
-            "#"
-        };
-        int i = 0;
-        foreach (IMagickColor<byte> color in palette)
-        {
-            gplLines.Add($"{color.R,3} {color.G,3} {color.B,3}\t#{i}");
-            i++;
-        }
-        File.WriteAllLines(@"test.gpl", gplLines);
-        
-        MagickImage paletteImage = new MagickImage(MagickColors.Transparent, 512, 128);
-
-        Drawables canvas = new Drawables();
-
-        double x = 0, y = 0, width = 64, height = 64;
-        foreach(IMagickColor<byte> color in palette)
-        {
-            // Define the rectangle's properties
-            canvas
-                .StrokeColor(color)
-                .StrokeWidth(2)
-                .FillColor(color)
-                .Rectangle(x, y, x + width, y + height);
-
-            x += width;
-            if (x > 512)
-            {
-                x = 0;
-                y += height;
-            }
-        }
-
-        // Draw the square onto the image
-        canvas.Draw(paletteImage);
-
-        // Save the result
-
-        paletteImage.Format = MagickFormat.Png;
-        paletteImage.Write(Console.OpenStandardOutput());
-
-        // paletteImage.Format = MagickFormat.Png;
-        // paletteImage.Write(opts.OutputFile);
+        GeneratePalette(opts, inputImage);
     }
 }
