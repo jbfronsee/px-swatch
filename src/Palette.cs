@@ -3,6 +3,27 @@ using ImageMagick.Colors;
 
 class Palette
 {
+    class ColorHSVComparer : IComparer<ColorHSV>
+    {
+        public int Compare(ColorHSV? x, ColorHSV? y)
+        {
+            if (x is null)
+            {
+                return y is not null ? -y.CompareTo(x) : 0;
+            }
+
+            if(y is not null)
+            {
+                if (ColorWithinThreshold(x, y))
+                {
+                    return 0;
+                }
+            }
+
+            return x.CompareTo(y);
+        }
+    }
+
     /// <summary>
     /// Creates Palette from image using Histogram
     /// </summary>
@@ -44,12 +65,7 @@ class Palette
             threshS *= 2;
         }
 
-        if (deltaH > threshH || deltaS > threshS || deltaV > threshV)
-        {
-            return false;
-        }
-
-        return true;
+        return deltaH <= threshH && deltaS <= threshS && deltaV <= threshV;
     }
 
     /// <summary>
@@ -60,52 +76,27 @@ class Palette
     /// <exception cref="MagickException">Thrown when an error is raised by ImageMagick.</exception>
     public static List<IMagickColor<byte>> PaletteFromImage(MagickImage image)
     {
-        var hist = image.Histogram();
-
-        Dictionary<ColorHSV, uint> maxValues = new Dictionary<ColorHSV, uint>();
-        foreach (var color in hist)
+        SortedDictionary<ColorHSV, uint> grouped = new(new ColorHSVComparer());
+        foreach (var color in image.Histogram())
         {
-            ColorHSV colorHSV = ColorHSV.FromMagickColor(color.Key) ?? new ColorHSV(0, 0, 0);
-            
-            ColorHSV? similarKey = null;
-            
-            uint min = uint.MaxValue;
-            ColorHSV? minKey = null;
-            foreach (var max in maxValues)
-            {
-                if (ColorWithinThreshold(colorHSV, max.Key))
-                {
-                    similarKey = max.Key;
-                    break;
-                }
+            ColorHSV hsv = ColorHSV.FromMagickColor(color.Key) ?? new ColorHSV(0, 0, 0);
 
-                if (color.Value > max.Value && max.Value <= min)
-                {
-                    minKey = max.Key;
-                }
-
-                min = Math.Min(max.Value, min);
-            }
-
-            if (similarKey != null)
+            // If the color is within threshold update the max value.
+            if (grouped.ContainsKey(hsv))
             {
-                maxValues[similarKey] += color.Value;
+                grouped[hsv] += color.Value;
             }
-            else if (maxValues.Count < 16)
+            else
             {
-                maxValues[colorHSV] = color.Value;
+                grouped.Add(hsv, color.Value);
             }
-            else if (minKey != null)
-            {
-                maxValues.Remove(minKey);
-                maxValues[colorHSV] = color.Value;
-            }    
         }
 
+        var maxes = grouped.OrderByDescending(g => g.Value).Take(16).ToList();
         List<IMagickColor<byte>> palette = new List<IMagickColor<byte>>();
-        foreach (var color in maxValues.OrderByDescending(c => c.Value))
+        foreach (var (color, _) in maxes)
         {
-            palette.Add(color.Key.ToMagickColor());
+            palette.Add(color.ToMagickColor());
         }
 
         return palette;
