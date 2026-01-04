@@ -49,12 +49,12 @@ internal class Program
         bool hasErrors = false;
         if (string.IsNullOrEmpty(opts.InputFile))
         {
-            Console.WriteLine("Usage: px-swatch [InputFile] [flags]");
+            Console.WriteLine("Usage: px-swatch [InputFile] [Flags]");
             hasErrors = true;
         }
         else if (opts.Print == false && opts.PrintImage == false && string.IsNullOrEmpty(opts.OutputFile))
         {
-            Console.WriteLine("Missing output file specified with -o [filepath]");
+            Console.WriteLine("Missing output file specified with -o [Filepath]");
             hasErrors = true;
         }
         else if (!string.IsNullOrEmpty(opts.InvalidArg))
@@ -75,22 +75,46 @@ internal class Program
             return;
         }
 
-        var inputImage = new MagickImage(opts.InputFile);
-
-        if (opts.Print || opts.Verbose)
+        try
         {
-            Console.WriteLine("Processing Image...");
-        }
-
-        if (opts.Verbose)
-        {
-            var histogram = inputImage.Histogram();
-            foreach (var color in histogram)
+            MagickImage inputImage = new();
+            
+            try
             {
-                Console.WriteLine($"Color: {color.Key} Occurences: {color.Value}");
+                inputImage = new MagickImage(opts.InputFile);
+            }
+            catch (MagickException)
+            {
+                Console.WriteLine($"Input file: {opts.InputFile} does not exist or is not an image.");
+                return;
+            }
+
+            if (opts.Print || opts.Verbose)
+            {
+                Console.WriteLine("Processing Image...");
+            }
+
+            if (opts.Verbose)
+            {
+                var histogram = inputImage.Histogram();
+                foreach (var color in histogram)
+                {
+                    Console.WriteLine($"Color: {color.Key} Occurences: {color.Value}");
+                }
+            }
+
+            GeneratePalette(opts, inputImage);
+        } 
+        catch (MagickException me)
+        {
+            if (opts.Verbose)
+            {
+                Console.WriteLine(me);
+            }
+            else
+            {
+                Console.WriteLine(me.Message);
             }
         }
-
-        GeneratePalette(opts, inputImage);
     }
 }

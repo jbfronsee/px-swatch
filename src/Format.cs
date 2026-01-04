@@ -27,6 +27,7 @@ class Format
             gplLines.Add($"{color.R,3} {color.G,3} {color.B,3}\t#{i}");
             i++;
         }
+
         return gplLines;
     }
 
