@@ -1,4 +1,4 @@
-public struct ThresholdHSV(double hue = 0, double saturation = 0, double value = 0, double valueStart = 0)
+public class ThresholdHSV(double hue = 0, double saturation = 0, double value = 0, double valueStart = 0)
 {
     public double Hue { get; set; } = hue;
 
@@ -7,4 +7,9 @@ public struct ThresholdHSV(double hue = 0, double saturation = 0, double value =
     public double Value { get; set; } = value;
 
     public double ValueStart { get; set; } = valueStart;
+
+    public override string ToString()
+    {
+        return $"Hue: {Hue} Saturation: {Saturation} Value: {Value}";
+    }
 }

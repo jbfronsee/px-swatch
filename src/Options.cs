@@ -2,9 +2,10 @@ public class Options
 {
     public static Options GetOptions(string[] args)
     {
-        Options opts = new Options();
+        Options opts = new();
         bool output = false;
         bool resize = false;
+        bool tol = false;
         foreach (string arg in args)
         {
             if (arg.StartsWith("-"))
@@ -38,6 +39,16 @@ public class Options
 
                     }
                 }
+                else if (arg.StartsWith("--"))
+                {
+                    string trimArg = arg[2..];
+                    switch (trimArg)
+                    {
+                        case "tol":
+                            tol = true;
+                            break;
+                    }
+                }
             }
             else
             {
@@ -51,6 +62,11 @@ public class Options
                 {
                     opts.ResizePercentage = double.Parse(arg);
                     resize = false;
+                }
+                else if (tol)
+                {
+                    opts.ToleranceStr = arg;
+                    tol = false;
                 }
                 else if (string.IsNullOrEmpty(opts.InputFile))
                 {
@@ -79,6 +95,7 @@ public class Options
         Print = true;
         PrintImage = false;
         ResizePercentage = 100;
+        ToleranceStr = "";
         Verbose = false;
     }
 
@@ -97,6 +114,8 @@ public class Options
     public bool PrintImage { get; set; }
 
     public double ResizePercentage { get; set; }
+
+    public string ToleranceStr { get; set; }
     
     public bool Verbose { get; set; }
 }

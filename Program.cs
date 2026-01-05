@@ -1,15 +1,15 @@
 ﻿using ImageMagick;
+using Microsoft.Extensions.Configuration;
 
 internal class Program
 {
-    public static void GeneratePalette(Options opts, MagickImage inputImage)
+    public static void GeneratePalette(Options opts, MagickImage inputImage, Tolerances tolerances)
     {
         if(opts.ResizePercentage < 100 && opts.ResizePercentage > 0)
         {
             inputImage.Resize(new Percentage(opts.ResizePercentage));
         }
 
-        Tolerances tolerances = new();
         List<IMagickColor<byte>> palette = Palette.PaletteFromImage(inputImage, tolerances);
 
         if (!opts.HistogramOnly)
@@ -78,6 +78,23 @@ internal class Program
 
         try
         {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
+
+            Tolerances? tolerances = Config.GetTolerances(config.GetSection("Tolerances"));
+            if (tolerances is null)
+            {
+                Console.WriteLine("Invalid or missing appsettings.json file");
+                return;
+            }
+
+            if (opts.Verbose)
+            {
+                Console.WriteLine($"Tolerances:\n{tolerances}");
+            }
+            
             MagickImage inputImage = new();
             
             try
@@ -95,16 +112,7 @@ internal class Program
                 Console.WriteLine("Processing Image...");
             }
 
-            if (opts.Verbose)
-            {
-                var histogram = inputImage.Histogram();
-                foreach (var color in histogram)
-                {
-                    Console.WriteLine($"Color: {color.Key} Occurences: {color.Value}");
-                }
-            }
-
-            GeneratePalette(opts, inputImage);
+            GeneratePalette(opts, inputImage, tolerances);
         } 
         catch (Exception e)
         {
