@@ -79,20 +79,29 @@ internal class Program
         try
         {
             var config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
+                .SetBasePath(AppContext.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: false)
                 .Build();
 
             Tolerances? tolerances = Config.GetTolerances(config.GetSection("Tolerances"));
             if (tolerances is null)
             {
-                Console.WriteLine("Invalid or missing appsettings.json file");
+                Console.WriteLine("Invalid or missing appsettings.json file.");
                 return;
             }
 
             if (opts.Verbose)
             {
+                Console.WriteLine(new string('-', 30));
                 Console.WriteLine($"Tolerances:\n{tolerances}");
+                Console.WriteLine(new string('-', 30));
+            }
+
+            (bool tolValid, string tolMessage) = tolerances.Validate();
+            if (!tolValid)
+            {
+                Console.WriteLine(tolMessage);
+                return;
             }
             
             MagickImage inputImage = new();

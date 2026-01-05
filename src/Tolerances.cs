@@ -1,28 +1,12 @@
-public class Tolerances
+public class Tolerances(ThresholdHSV darks, ThresholdHSV shadows, ThresholdHSV midtones, ThresholdHSV brights)
 {
-    public const double DEF_DARK_START = 0;
+    public ThresholdHSV Darks { get; set; } = darks;
 
-    public const double DEF_SHADOW_START = .2;
+    public ThresholdHSV Shadows { get; set; } = shadows;
 
-    public const double DEF_MID_START = .4;
+    public ThresholdHSV Midtones { get; set; } = midtones;
 
-    public const double DEF_BRIGHT_START = .6;
-
-    public Tolerances()
-    {
-        Darks = new(valueStart:DEF_DARK_START);
-        Shadows = new(valueStart:DEF_SHADOW_START);
-        Midtones = new(valueStart:DEF_MID_START);
-        Brights = new(valueStart:DEF_BRIGHT_START);
-    }
-
-    public ThresholdHSV Darks { get; set; }
-
-    public ThresholdHSV Shadows { get; set; }
-
-    public ThresholdHSV Midtones { get; set; }
-
-    public ThresholdHSV Brights { get; set; }
+    public ThresholdHSV Brights { get; set; } = brights;
 
     /// <summary>
     /// Get threshold for dark, shadow, midtone, or bright values.
@@ -50,5 +34,32 @@ public class Tolerances
     public override string ToString()
     {
         return $"Darks: {Darks}\nShadows: {Shadows}\nMidtones: {Midtones}\nBrights: {Brights}";
+    }
+
+    public (bool, string) Validate()
+    {
+        if (
+            Darks.ValueStart > Shadows.ValueStart ||
+            Shadows.ValueStart > Midtones.ValueStart || 
+            Midtones.ValueStart > Brights.ValueStart
+        )
+        {
+            return (false, "Start values for tolerance ranges are invalid.");
+        }
+        
+        string err = "Invalid field value for {0}: {1}";
+
+        (ThresholdHSV, string)[] fields = [(Darks, "Darks"), (Shadows, "Shadows"), (Midtones, "Midtones"), (Brights, "Brights")];
+
+        foreach ((ThresholdHSV thresh, string name) in fields)
+        {
+            (bool result, string message) = thresh.Validate();
+            if (!result)
+            {
+                return (false, string.Format(err, name, message));
+            }   
+        }
+
+        return (true, "");
     }
 }

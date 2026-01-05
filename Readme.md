@@ -14,7 +14,7 @@ importing into GIMP or Krita.
     - Windows RID: `win-x64`
 
 # How to Run
-`./bin/Release/net8.0/<RID>/publish/px-swatch` [Input File] [Flags]
+`./bin/Release/net8.0/<RID>/publish/px-swatch [Input File] [Flags]`
 
 # Options
 
