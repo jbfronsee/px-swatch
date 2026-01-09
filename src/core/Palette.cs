@@ -84,7 +84,7 @@ public class Palette
 
         var maxes = histogram.OrderByDescending(g => g.Value).Distinct().Take(16).ToList();
         List<IMagickColor<byte>> palette = [];
-        foreach (var (color, _) in maxes)
+        foreach (var (color, _) in maxes.OrderBy(g => g.Key, new SimpleColor.HSVComparer()))
         {
             palette.Add(new ColorHSV(color.H, color.S, color.V).ToMagickColor());
         }
@@ -152,11 +152,14 @@ public class Palette
             clusters = KMeansCluster(pixels, clusters, tolerances);
         }
 
-        return clusters.Select(c =>
+        var palette = clusters.Select(c =>
         {
             Unicolour color = new Unicolour(ColourSpace.Lab, c.L, c.A, c.B);
-            var rgb = color.Rgb.Byte255;
-            return new MagickColor((byte)rgb.R, (byte)rgb.G, (byte)rgb.B);
-        }).ToList<IMagickColor<byte>>();
+            var (h, s, v) = color.Hsb;
+            return new SimpleColor.HSV(h / 360, s, v);
+        }).ToList();
+
+        palette.Sort(new SimpleColor.HSVComparer());
+        return palette.Select(c => new ColorHSV(c.H, c.S, c.V).ToMagickColor()).ToList();
     }
 }
