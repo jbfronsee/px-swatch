@@ -1,12 +1,34 @@
 namespace SimpleColor
 {
+    /// <summary>
+    /// A 3 double struct representing an HSV Colorspace Value.
+    /// </summary>
+    /// <param name="H">Hue</param>
+    /// <param name="S">Saturation</param>
+    /// <param name="V">Value</param>
     public record struct Hsv(double H, double S, double V);
 
+    /// <summary>
+    /// A 3 double struct representing an Lab Colorspace Value.
+    /// </summary>
+    /// <param name="L">L</param>
+    /// <param name="A">a</param>
+    /// <param name="B">b</param>
     public record struct Lab(double L, double A, double B);
 
+    /// <summary>
+    /// A 3 byte struct representing an RGB Colorspace Value.
+    /// </summary>
+    /// <param name="R">Red</param>
+    /// <param name="G">Green</param>
+    /// <param name="B">Blue</param>
     public record struct Rgb(byte R, byte G, byte B);
 
     // Records implement IEquatable but not IComparable
+
+    /// <summary>
+    /// HSV Comparer for sorting by Hue, Saturation, and Value in that order.
+    /// </summary>
     public class HsvComparer() : IComparer<Hsv>
     {
         public virtual int Compare(Hsv x, Hsv y)
@@ -21,6 +43,9 @@ namespace SimpleColor
         }
     }
 
+    /// <summary>
+    /// Lab Comparer for sorting by L, a, and b, in that order.
+    /// </summary>
     public class LabComparer() : IComparer<Lab>
     {
         public virtual int Compare(Lab x, Lab y)
@@ -35,6 +60,9 @@ namespace SimpleColor
         }
     }
 
+    /// <summary>
+    /// RGB Comparer for sorting by Red, Green, and Blue, in that order.
+    /// </summary>
     public class RgbComparer() : IComparer<Rgb>
     {
         public virtual int Compare(Rgb x, Rgb y)

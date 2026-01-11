@@ -1,10 +1,26 @@
 namespace ByteColor
 {
+    /// <summary>
+    /// A 3 byte struct representing an HSV Colorspace value.
+    /// </summary>
+    /// <param name="H">Hue</param>
+    /// <param name="S">Saturation</param>
+    /// <param name="V">Value</param>
     public record struct Hsv(byte H, byte S, byte V);
 
+    /// <summary>
+    /// A 3 byte struct representing an Lab Colorspace value.
+    /// </summary>
+    /// <param name="L">L</param>
+    /// <param name="A">a</param>
+    /// <param name="B">b</param>
     public record struct Lab(byte L, byte A, byte B);
 
     // Records implement IEquatable but not IComparable
+    
+    /// <summary>
+    /// HSV Comparer for sorting by Hue, Saturation, and Value in that order.
+    /// </summary>
     public class HsvComparer() : IComparer<Hsv>
     {
         public virtual int Compare(Hsv x, Hsv y)
@@ -19,6 +35,9 @@ namespace ByteColor
         }
     }
 
+    /// <summary>
+    /// Lab Comparer for sorting by L, a, and b, in that order.
+    /// </summary>
     public class LabComparer() : IComparer<Lab>
     {
         public virtual int Compare(Lab x, Lab y)

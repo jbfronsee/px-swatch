@@ -2,6 +2,12 @@ using ImageMagick;
 
 public static class MagickExtensions
 {
+    /// <summary>
+    /// Gets pixels as SimpleColor.Rgb.
+    /// </summary>
+    /// <param name="image">The image to grab pixels from.</param>
+    /// <returns></returns>
+    /// <exception cref="MagickImageErrorException">Throws when library has an error or when channels < 3</exception>
     public static IEnumerable<SimpleColor.Rgb> GetPixelColors(this MagickImage image)
     {
         int channels = (int)image.ChannelCount;
