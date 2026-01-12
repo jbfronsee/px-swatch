@@ -1,58 +1,66 @@
-public static class HsvConverter
+
+namespace Conversion 
 {
-    private static byte ToByte(double value)
+    public static class Hsv
     {
-        return (byte)(value * byte.MaxValue);
-    }
+        private static ushort PackDouble(double value)
+        {
+            return (ushort)(value * ushort.MaxValue);
+        }
 
-    private static double ToSimple(byte value)
-    {
-        return (double)value / byte.MaxValue;
-    }
+        private static double UnpackShort(ushort value)
+        {
+            return (double)value / ushort.MaxValue;
+        }
 
-    /// <summary>
-    /// Convert HSV value from double representation to byte representation.
-    /// Precision is lost during conversion.
-    /// </summary>
-    /// <param name="h">Hue</param>
-    /// <param name="s">Saturation</param>
-    /// <param name="v">Value</param>
-    /// <returns></returns>
-    public static ByteColor.Hsv ToByte(double h, double s, double v)
-    {
-        return new ByteColor.Hsv(ToByte(h), ToByte(s), ToByte(v));
-    }
+        /// <summary>
+        /// Convert HSV value from double representation to ushort representation.
+        /// 
+        /// The calculated number of colors it can represent is all 16,777,216 RGB colors
+        /// of the total RGB values.
+        /// </summary>
+        /// <param name="h">Hue</param>
+        /// <param name="s">Saturation</param>
+        /// <param name="v">Value</param>
+        /// <returns></returns>
+        public static SimpleColor.PackedHsv Pack(double h, double s, double v)
+        {
+            return new SimpleColor.PackedHsv(PackDouble(h), PackDouble(s), PackDouble(v));
+        }
 
-    /// <summary>
-    /// Convert HSV value from double representation to byte representation.
-    /// Precision is lost during conversion.
-    /// </summary>
-    /// <param name="hsv">Color to convert.</param>
-    /// <returns></returns>
-    public static ByteColor.Hsv ToByte(SimpleColor.Hsv hsv)
-    {
-        return ToByte(hsv.H, hsv.S, hsv.V);
-    }
+        /// <summary>
+        /// Convert HSV value from double representation to byte representation.
+        /// 
+        /// The calculated number of colors it can represent is all 16,777,216 RGB colors
+        /// of the total RGB values.
+        /// </summary>
+        /// <param name="hsv">Color to convert.</param>
+        /// <returns></returns>
+        public static SimpleColor.PackedHsv Pack(SimpleColor.Hsv hsv)
+        {
+            return Pack(hsv.H, hsv.S, hsv.V);
+        }
 
-    /// <summary>
-    /// Convert HSV value from byte representation to double representation.
-    /// </summary>
-    /// <param name="h">Hue</param>
-    /// <param name="s">Saturation</param>
-    /// <param name="v">Value</param>
-    /// <returns></returns>
-    public static SimpleColor.Hsv ToSimple(byte h, byte s, byte v)
-    {
-        return new SimpleColor.Hsv(ToSimple(h), ToSimple(s), ToSimple(v));
-    }
+        /// <summary>
+        /// Convert HSV value from byte representation to double representation.
+        /// </summary>
+        /// <param name="h">Hue</param>
+        /// <param name="s">Saturation</param>
+        /// <param name="v">Value</param>
+        /// <returns></returns>
+        public static SimpleColor.Hsv Unpack(ushort h, ushort s, ushort v)
+        {
+            return new SimpleColor.Hsv(UnpackShort(h), UnpackShort(s), UnpackShort(v));
+        }
 
-    /// <summary>
-    /// Convert HSV value from byte representation to double representation.
-    /// </summary>
-    /// <param name="hsv">Color to convert.</param>
-    /// <returns></returns>
-    public static SimpleColor.Hsv ToSimple(ByteColor.Hsv hsv)
-    {
-        return ToSimple(hsv.H, hsv.S, hsv.V);
+        /// <summary>
+        /// Convert HSV value from byte representation to double representation.
+        /// </summary>
+        /// <param name="hsv">Color to convert.</param>
+        /// <returns></returns>
+        public static SimpleColor.Hsv Unpack(SimpleColor.PackedHsv hsv)
+        {
+            return Unpack(hsv.H, hsv.S, hsv.V);
+        }
     }
 }
