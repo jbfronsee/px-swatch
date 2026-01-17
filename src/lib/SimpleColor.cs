@@ -10,7 +10,7 @@ namespace Lib.SimpleColor
     /// <param name="V">Value</param>
     public record struct Hsv(double H, double S, double V) : IComparable<Hsv>
     {
-        public int CompareTo(Hsv other)
+        public readonly int CompareTo(Hsv other)
         {
             int result = H.CompareTo(other.H);
             if (result != 0) return result;

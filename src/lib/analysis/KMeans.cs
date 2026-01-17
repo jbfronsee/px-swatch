@@ -11,13 +11,13 @@ public abstract class KMeans<T, U, V>
 {
     public virtual T[] Clusters { get; set; } = [];
 
-    protected static void UpdateBestCluster(T[] clusters, SimpleColor.Rgb pixel, Dictionary<SimpleColor.Rgb, U>? colormap, Dictionary<SimpleColor.Rgb, int> memoizedClusters)
+    protected static int UpdateBestCluster(T[] clusters, SimpleColor.Rgb pixel, Dictionary<SimpleColor.Rgb, U>? colormap, Dictionary<SimpleColor.Rgb, int> memoizedClusters)
     {
         V color;
         if (colormap is null)
         {
             // TODO figure out how to handle this.
-            return;
+            return 0;
             //color = pixel;
         }
         else
@@ -45,8 +45,10 @@ public abstract class KMeans<T, U, V>
         }
 
         T bestCluster = clusters[bestClusterIndex];
-        bestCluster.Mean = ColorMath.UpdateMeanColor(bestCluster.Mean, bestCluster.Count, color);
+        bestCluster.Mean = ColorMath.CalculateNewMean(bestCluster.Mean, bestCluster.Count, color);
         bestCluster.Count++;
+
+        return bestClusterIndex;
     }
 
     public virtual void Cluster(SimpleColor.Rgb[] pixels, Dictionary<SimpleColor.Rgb, U> colormap)
@@ -91,7 +93,7 @@ public abstract class KMeans<T, U, V>
             Clusters = Clusters.Zip(threadMeans).Select(z => 
                 {
                     var (total, threadResults) = z;
-                    total.Mean = ColorMath.UpdateMeanColor(total.Mean, total.Count, threadResults.Mean, threadResults.Count);
+                    total.Mean = ColorMath.AddMeans(total.Mean, total.Count, threadResults.Mean, threadResults.Count);
                     total.Count += threadResults.Count;
                     return total;
                 }

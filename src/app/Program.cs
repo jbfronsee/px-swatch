@@ -1,11 +1,14 @@
 ﻿using App.Core;
 using App.Io;
 using ImageMagick;
+using ImageMagick.Colors;
 using Microsoft.Extensions.Configuration;
 using Wacton.Unicolour;
 
 using SimpleColor = Lib.SimpleColor;
 using Conversion = Lib.Conversion;
+using Lib.Analysis;
+using Lib.Colors;
 
 namespace App;
 
@@ -27,13 +30,34 @@ internal class Program
     {
         if ( opts.ResizePercentage < 100 && opts.ResizePercentage > 0)
         {
-            inputImage.Resize(new Percentage(opts.ResizePercentage));
+            inputImage.Sample(new Percentage(opts.ResizePercentage));
         }
 
         inputImage.Settings.BackgroundColor = MagickColors.White;
         inputImage.Alpha(AlphaOption.Remove);
 
-        List<IMagickColor<byte>> palette = Palette.FromImage(inputImage, tolerances, buckets);
+        Histogram histogram = Palette.CalculateHistogramFromSample(inputImage, tolerances, buckets);
+        
+        List<VectorLab> paletteLab = histogram
+            .PaletteWithFilter()
+            .Distinct()
+            .OrderByDescending(e => e.Count)
+            .Select(c => c.Mean)
+            .Take(16)
+            .ToList();
+
+        if (paletteLab.Count < 16)
+        {
+            paletteLab.AddRange(histogram.Palette().Where(p => !paletteLab.Contains(p.Mean)).Select(e => e.Mean));
+        }
+        //Console.WriteLine(histogram);
+                // var maxes = histogram.Results.OrderByDescending(h => h.Count).Where(h => h.Count > 0).Take(16).ToList();
+        // List<IMagickColor<byte>> palette = maxes
+
+        List<IMagickColor<byte>> palette = paletteLab.Select(Colors.Convert.ToHsv)
+            .OrderBy(c => c)
+            .Select(c => new ColorHSV(c.H, c.S, c.V).ToMagickColor())
+            .ToList();
 
         if (!opts.HistogramOnly)
         {
@@ -85,11 +109,11 @@ internal class Program
 
             if (opts.PrintImage)
             {
-                var settings = new QuantizeSettings();
-                settings.ColorSpace = ColorSpace.Lab;
-                settings.DitherMethod = DitherMethod.FloydSteinberg;
-                inputImage.Remap(palette, settings);
-                //inputImage.Write(Console.OpenStandardOutput());
+                // var settings = new QuantizeSettings();
+                // settings.ColorSpace = ColorSpace.Lab;
+                // settings.DitherMethod = DitherMethod.FloydSteinberg;
+                // inputImage.Remap(palette, settings);
+                // inputImage.Write(Console.OpenStandardOutput());
                 paletteImage.Write(Console.OpenStandardOutput());
             }
             else
@@ -98,8 +122,8 @@ internal class Program
                 settings.DitherMethod = DitherMethod.FloydSteinberg;
                 settings.ColorSpace = ColorSpace.Lab;
                 inputImage.Remap(palette, settings);
-                //inputImage.Write(opts.OutputFile);
-                paletteImage.Write(opts.OutputFile);
+                inputImage.Write(opts.OutputFile);
+                //paletteImage.Write(opts.OutputFile);
             }
         }
     }

@@ -57,8 +57,8 @@ public class Buckets
         foreach (double hue in DesaturatedHues)
         {
             //double hue = i * (360 / 14);
-            Unicolour start = new(ColourSpace.Hsb, hue, .3, 1);
-            Unicolour end = new(ColourSpace.Hsb, hue, .5, .25);
+            Unicolour start = new(ColourSpace.Hsb, hue, .3, .9);
+            Unicolour end = new(ColourSpace.Hsb, hue, .5, .20);
             palette.AddRange(start.Palette(end, ColourSpace.Hsb, 8));
         }
 

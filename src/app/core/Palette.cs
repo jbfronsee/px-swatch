@@ -16,7 +16,7 @@ public static class Palette
     /// 
     /// <param name="pixels">The pixels of the image in HSV space.</param>
     /// <returns>The palette as a list of MagickColors ordered by Hue then Saturation then Value.</returns>
-    public static List<IMagickColor<byte>> FromPixels(SimpleColor.Rgb[] pixels, Dictionary<SimpleColor.Rgb, PackedLab> colormap, Tolerances tolerances, Buckets buckets)
+    public static Histogram CalculateHistogramFromPixels(SimpleColor.Rgb[] pixels, Dictionary<SimpleColor.Rgb, PackedLab> colormap, Tolerances tolerances, Buckets buckets)
     {
         Histogram histogram = new();
 
@@ -31,18 +31,18 @@ public static class Palette
 
         histogram.Cluster(pixels, colormap);
 
-        var maxes = histogram.Results.OrderByDescending(h => h.Count).Take(16).ToList();
-        List<IMagickColor<byte>> palette = maxes
-            .Select(entry => Colors.Convert.ToHsv(entry.Mean))
-            .OrderBy(c => c)
-            .Select(c => new ColorHSV(c.H, c.S, c.V).ToMagickColor())
-            .ToList();
+        // var maxes = histogram.Results.OrderByDescending(h => h.Count).Where(h => h.Count > 0).Take(16).ToList();
+        // List<IMagickColor<byte>> palette = maxes
+        //     .Select(entry => Colors.Convert.ToHsv(entry.Mean))
+        //     .OrderBy(c => c)
+        //     .Select(c => new ColorHSV(c.H, c.S, c.V).ToMagickColor())
+        //     .ToList();
 
-        return palette;
+        return histogram;
     }
 
 
-    private static List<IMagickColor<byte>> FromImageDirect(IMagickImage<byte> image, Tolerances tolerances, Buckets buckets)
+    public static Histogram CalculateHistogram(IMagickImage<byte> image, Tolerances tolerances, Buckets buckets)
     {
         SimpleColor.Rgb[] pixels = new SimpleColor.Rgb[image.Width * image.Height];
         
@@ -63,7 +63,7 @@ public static class Palette
             }
         }
         
-        return FromPixels(pixels, colormap, tolerances, buckets);
+        return CalculateHistogramFromPixels(pixels, colormap, tolerances, buckets);
     }
 
     /// <summary>
@@ -73,10 +73,9 @@ public static class Palette
     /// <param name="tolerances">The tolerances that represent threshold for histogram to find a match.</param>
     /// <exception cref="MagickException">Thrown when an error is raised by ImageMagick.</exception>
     /// <returns>The palette as a list of MagickColors ordered by Hue then Saturation then Value.</returns>
-    public static List<IMagickColor<byte>> FromImage(MagickImage image, Tolerances tolerances, Buckets buckets)
+    public static Histogram CalculateHistogramFromSample(MagickImage image, Tolerances tolerances, Buckets buckets)
     {
         double largePixels = 640 * 480;
-        //double largePixels = 1920 * 1080;
         double imageLength = image.Width * image.Height;
 
         if (imageLength > largePixels)
@@ -84,11 +83,10 @@ public static class Palette
             //Console.WriteLine("resized");
             using var sample = image.Clone();
             sample.Sample(new Percentage(100 / Math.Sqrt(imageLength / largePixels)));
-            sample.Write("out-thing.png");
-            return FromImageDirect(sample, tolerances, buckets);
+            return CalculateHistogram(sample, tolerances, buckets);
         }
         
-        return FromImageDirect(image, tolerances, buckets);
+        return CalculateHistogram(image, tolerances, buckets);
     }
 
     /// <summary>
@@ -101,9 +99,7 @@ public static class Palette
     public static List<IMagickColor<byte>> FromPixelsKmeans(SimpleColor.Rgb[] pixels, List<IMagickColor<byte>> seeds, Dictionary<SimpleColor.Rgb, PackedLab> colormap, bool verbose = false)
     {        
         int maxIterations = 32;
-        VectorLab[] clusters = seeds.Select(Colors.Convert.ToLab).ToArray();
-
-        KMeansLab kmeans = new(clusters.Select(c => new ClusterLab(c, c, 0)).ToArray());
+        KMeansLab kmeans = new(seeds.Select(Colors.Convert.ToLab).Select(c => new ClusterLab(c, c, 0)).ToArray());
 
         if (verbose)
         {
@@ -119,18 +115,18 @@ public static class Palette
             }
 
             kmeans.ClusterParallel(pixels, colormap);
-
-            // If there is not a lot of change based on epsilon value then stop iterating.
-            finished = clusters.Zip(kmeans.Clusters).All(pair =>
+    
+            finished = true;
+            foreach (var cluster in kmeans.Clusters)
             {
-                var (oldCluster, newCluster) = pair;
-                return ColorMath.CalculateDistance(oldCluster, newCluster.Mean) <= 2.0;
-            });
+                finished = finished && (ColorMath.CalculateDistance(cluster.Cluster, cluster.Mean) <= 1.0);
 
-            clusters = kmeans.Clusters.Select(c => c.Mean).ToArray();
+                
+                cluster.Cluster = cluster.Mean;
+            }
         }
 
-        List<SimpleColor.Hsv> palette = clusters.Select(Colors.Convert.ToHsv).ToList();
+        List<SimpleColor.Hsv> palette = kmeans.Clusters.Select(c => Colors.Convert.ToHsv(c.Mean)).ToList();
         palette.Sort();
         
         return palette.Select(Colors.Convert.ToMagickColor).ToList();

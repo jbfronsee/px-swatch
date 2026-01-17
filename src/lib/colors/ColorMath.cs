@@ -2,37 +2,37 @@ namespace Lib.Colors;
 
 public static class ColorMath
 {
-    public static double UpdateMean(double mean, double count, double newValue)
+    public static double CalculateNewMean(double mean, double count, double newValue)
     {
         double sum = mean * count;
         return (sum + newValue) / (count + 1);
     }
 
-    public static double UpdateMean(double mean, double count, double otherMean, double otherCount)
+    public static double AddMeans(double mean, double count, double otherMean, double otherCount)
     {
         double sum1 = mean * count;
         double sum2 = otherMean * otherCount;
         return (sum1 + sum2) / (count + otherCount);
     }
 
-    public static T UpdateMeanColor<T>(T mean, int count, T newColor) where T: IColorVector<double>
+    public static T CalculateNewMean<T>(T mean, int count, T newColor) where T: IColorVector<double>
     {
-        mean.X = UpdateMean(mean.X, count, newColor.X);
-        mean.Y = UpdateMean(mean.Y, count, newColor.Y);
-        mean.Z = UpdateMean(mean.Z, count, newColor.Z);
+        mean.X = CalculateNewMean(mean.X, count, newColor.X);
+        mean.Y = CalculateNewMean(mean.Y, count, newColor.Y);
+        mean.Z = CalculateNewMean(mean.Z, count, newColor.Z);
         return mean;
     }
 
-    public static T UpdateMeanColor<T>(T mean, int count, T mean2, int count2) where T: IColorVector<double>
+    public static T AddMeans<T>(T mean, int count, T mean2, int count2) where T: IColorVector<double>
     {
         if (count == 0 && count2 == 0)
         {
             return mean;
         }
 
-        mean.X = UpdateMean(mean.X, count, mean2.X, count2);
-        mean.Y = UpdateMean(mean.Y, count, mean2.Y, count2);
-        mean.Z = UpdateMean(mean.Z, count, mean2.Z, count2);
+        mean.X = AddMeans(mean.X, count, mean2.X, count2);
+        mean.Y = AddMeans(mean.Y, count, mean2.Y, count2);
+        mean.Z = AddMeans(mean.Z, count, mean2.Z, count2);
         return mean;
     }
 
