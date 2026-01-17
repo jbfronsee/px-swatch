@@ -28,7 +28,7 @@ namespace Lib.SimpleColor
     /// <param name="L">L</param>
     /// <param name="A">a</param>
     /// <param name="B">b</param>
-    public record struct Lab(double L, double A, double B) : IComparable<Lab>, IColorVector<double>
+    public record struct Lab(double L, double A, double B) : IComparable<Lab>
     {
         public double X { get => L; set => L = value; }
 

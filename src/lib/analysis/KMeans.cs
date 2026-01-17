@@ -1,29 +1,21 @@
 using System.Collections.Concurrent;
 
 using Lib.Colors;
+using Lib.Colors.Interfaces;
+using Lib.SimpleColor;
+using Lib.Analysis.Interfaces;
 
 namespace Lib.Analysis;
 
-public abstract class KMeans<T, U, V>
-    where T: class, ICluster<V, T>
-    where U: IPacked<V>
-    where V: IColorVector<double>, IPackable<U>
+public abstract class KMeans<T, U> : IKMeans<T>
+    where T: class, ICluster<U, T>
+    where U: IColorVector<double>
 {
     public virtual T[] Clusters { get; set; } = [];
 
-    protected static int UpdateBestCluster(T[] clusters, SimpleColor.Rgb pixel, Dictionary<SimpleColor.Rgb, U>? colormap, Dictionary<SimpleColor.Rgb, int> memoizedClusters)
+    protected virtual int UpdateBestCluster(T[] clusters, SimpleColor.Rgb pixel, Dictionary<SimpleColor.Rgb, int> memoizedClusters)
     {
-        V color;
-        if (colormap is null)
-        {
-            // TODO figure out how to handle this.
-            return 0;
-            //color = pixel;
-        }
-        else
-        {
-            color = colormap[pixel].Unpack();
-        }
+        U color = UnpackPixel(pixel);
 
         int bestClusterIndex = 0;
         if (!memoizedClusters.TryGetValue(pixel, out bestClusterIndex))
@@ -32,7 +24,7 @@ public abstract class KMeans<T, U, V>
             for (int i = 0; i < clusters.Length; i++)
             {
                 T cluster = clusters[i];
-                V value = cluster.Cluster;
+                U value = cluster.Cluster;
                 double distance = ColorMath.CalculateDistanceSquared(value, color);
                 if (distance < bestDistance)
                 {
@@ -51,13 +43,15 @@ public abstract class KMeans<T, U, V>
         return bestClusterIndex;
     }
 
-    public virtual void Cluster(SimpleColor.Rgb[] pixels, Dictionary<SimpleColor.Rgb, U> colormap)
+    protected abstract U UnpackPixel(SimpleColor.Rgb pixel);
+
+    public virtual void Cluster(SimpleColor.Rgb[] pixels)
     {
         Dictionary<SimpleColor.Rgb, int> memoizedClusters = [];
 
         foreach(var pixel in pixels)
         {
-            UpdateBestCluster(Clusters, pixel, colormap, memoizedClusters);
+            UpdateBestCluster(Clusters, pixel, memoizedClusters);
            // Console.WriteLine($"{bestClusterIndex} Count: {bestCluster.Count}");
         }
 
@@ -67,7 +61,7 @@ public abstract class KMeans<T, U, V>
         // }
     }
 
-    public virtual void ClusterParallel(SimpleColor.Rgb[] pixels, Dictionary<SimpleColor.Rgb, U>? colormap = null)
+    public virtual void ClusterParallel(SimpleColor.Rgb[] pixels)
     {
         //Console.WriteLine("still running this");
         ConcurrentBag<T[]> bag = [];
@@ -77,7 +71,7 @@ public abstract class KMeans<T, U, V>
             (pixel, _, threadLocals) =>
             {
                 var (memoizedCluster, means) = threadLocals;
-                UpdateBestCluster(means, pixel, colormap, memoizedCluster);
+                UpdateBestCluster(means, pixel, memoizedCluster);
                 return (memoizedCluster, means);
             }, 
             threadLocals =>
@@ -102,13 +96,20 @@ public abstract class KMeans<T, U, V>
     }
 }
 
-public class KMeansLab : KMeans<ClusterLab, PackedLab, VectorLab>
+public class KMeansLab : KMeans<ClusterLab, VectorLab>
 {
+    public Dictionary<SimpleColor.Rgb, Lib.Colors.PackedLab> Colormap { get; set; } = [];
+
     public KMeansLab() {}
 
-    public KMeansLab(ClusterLab[] clusters)
+    public KMeansLab(ClusterLab[] clusters, Dictionary<Rgb, Colors.PackedLab> colormap)
     {
         Clusters = clusters;
+        Colormap = colormap;
     }
 
+    protected override VectorLab UnpackPixel(Rgb pixel)
+    {
+        return Colormap[pixel].Unpack();
+    }
 }

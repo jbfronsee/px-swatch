@@ -1,3 +1,5 @@
+using Lib.Colors.Interfaces;
+
 namespace Lib.Colors;
 
  /// <summary>

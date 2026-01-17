@@ -1,4 +1,4 @@
-namespace Lib.Colors;
+namespace Lib.Colors.Interfaces;
 
 public interface IPacked<T>
 {

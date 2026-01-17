@@ -1,44 +1,37 @@
 using Lib.Colors;
+using Lib.Colors.Interfaces;
+using Lib.SimpleColor;
+using Lib.Analysis.Interfaces;
 
 namespace Lib.Analysis;
 
-public class Histogram : KMeans<Histogram.Entry, PackedLab, VectorLab>
+public abstract class Histogram<T, U>: KMeans<T, U>, IHistogram<T>
+    where T: class, IEntry<U, T>
+    where U: IColorVector<double>
 {
     private const int BucketCount = 256;
 
-    public sealed record Entry : SafeClusterLab<Entry>
-    {
-        public Entry(VectorLab cluster, VectorLab mean, int count) : base(cluster, mean, count) { }
-        
-        public VectorLab Bucket { get => Cluster; set => Cluster = value; }
+    public override T[] Clusters { get; set; } = new T[BucketCount];
 
-        public override Entry ParallelSafeCopy()
-        {
-            return new Entry(Cluster, Mean, Count);
-        }
-    }
-
-    public override Entry[] Clusters { get; set; } = new Entry[BucketCount];
-
-    public Entry[] Results => Clusters;
+    public T[] Results => Clusters;
 
     public int TotalPixelsCounted { get; set; } = 0;
 
-    public override void Cluster(SimpleColor.Rgb[] pixels, Dictionary<SimpleColor.Rgb, PackedLab> colormap)
+    public override void Cluster(SimpleColor.Rgb[] pixels)
     {
         TotalPixelsCounted = pixels.Length;
-        base.Cluster(pixels, colormap);
+        base.Cluster(pixels);
     }
 
-    public override void ClusterParallel(SimpleColor.Rgb[] pixels, Dictionary<SimpleColor.Rgb, PackedLab>? colormap = null)
+    public override void ClusterParallel(SimpleColor.Rgb[] pixels)
     {
         TotalPixelsCounted = pixels.Length;
-        base.ClusterParallel(pixels, colormap);
+        base.ClusterParallel(pixels);
     }
 
-    private List<Entry> Palette(Entry[] entries)
+    private List<T> Palette(T[] entries)
     {
-        List<Entry> matches = [];
+        List<T> matches = [];
         for (int i = 0, j = 1, k = 2; k < entries.Length; i++, j++, k++)
         {
             int prev = entries[i].Count;
@@ -54,14 +47,14 @@ public class Histogram : KMeans<Histogram.Entry, PackedLab, VectorLab>
         return matches;
     }
 
-    public List<Entry> Palette()
+    public List<T> Palette()
     {
         return Palette(Results);
     }
 
-    public List<Entry> PaletteWithFilter()
+    public List<T> PaletteWithFilter()
     {
-        Entry[] largeValues = Results.Where(e => e.Count > (0 + 1e-5)).ToArray();
+        T[] largeValues = Results.Where(e => e.Count > (0 + 1e-5)).ToArray();
         return Palette(largeValues);
 
 
@@ -90,5 +83,26 @@ public class Histogram : KMeans<Histogram.Entry, PackedLab, VectorLab>
         }
 
         return result;
+    }
+    // {
+    //     return Colormap[pixel].Unpack();
+    // }
+}
+
+
+public class HistogramLab : Histogram<EntryLab, VectorLab>
+{
+    public Dictionary<SimpleColor.Rgb, Lib.Colors.PackedLab> Colormap { get; set; } = [];
+
+    public HistogramLab() {}
+
+    public HistogramLab(Dictionary<Rgb, Colors.PackedLab> colormap)
+    {
+        Colormap = colormap;
+    }
+
+    protected override VectorLab UnpackPixel(Rgb pixel)
+    {
+        return Colormap[pixel].Unpack();
     }
 }
