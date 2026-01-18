@@ -1,27 +1,56 @@
-﻿using App.Core;
-using App.Io;
-using ImageMagick;
+﻿using ImageMagick;
+using ImageMagick.Colors;
 using Microsoft.Extensions.Configuration;
+using Wacton.Unicolour;
+
+using App.Core;
+using App.Io;
+using Lib.Analysis;
+using Lib.Colors;
 
 namespace App;
 
 internal class Program
 {
-    public static void GeneratePalette(Options opts, MagickImage inputImage, Tolerances tolerances)
+    public static void HandleException(Exception exception, string message, bool verbose)
     {
-        if (opts.ResizePercentage < 100 && opts.ResizePercentage > 0)
+        if (verbose)
         {
-            inputImage.Resize(new Percentage(opts.ResizePercentage));
+            Console.WriteLine(exception);
+        }
+        else
+        {
+            Console.WriteLine(message);
+        }
+    }
+
+    public static void GeneratePalette(Options opts, IMagickImage<byte> image, Buckets buckets, IMagickImage<byte>? originalImage = null)
+    {
+        originalImage ??= image;
+
+        HistogramLab histogram = Palette.CalculateHistogramFromSample(image, buckets);
+        
+        List<VectorLab> paletteLab = histogram
+            .PaletteWithFilter(opts.FilterLevel)
+            .DistinctBy(e => e.Mean)
+            .OrderByDescending(e => e.Count)
+            .Select(c => c.Mean)
+            .Take(16)
+            .ToList();
+
+        if (paletteLab.Count < 16)
+        {
+            paletteLab = paletteLab.Concat(histogram.Palette().Where(p => !paletteLab.Contains(p.Mean)).Select(e => e.Mean)).Take(16).ToList();
         }
 
-        inputImage.Settings.BackgroundColor = MagickColors.White;
-        inputImage.Alpha(AlphaOption.Remove);
-
-        List<IMagickColor<byte>> palette = Palette.FromImage(inputImage, tolerances);
+        List<IMagickColor<byte>> palette = paletteLab.Select(Colors.Convert.ToHsv)
+            .OrderBy(c => c)
+            .Select(c => new ColorHSV(c.H, c.S, c.V).ToMagickColor())
+            .ToList();
 
         if (!opts.HistogramOnly)
         {
-            palette = Palette.FromImageKmeans(inputImage, palette, opts.Verbose || opts.Print);
+            palette = Palette.FromImageKmeans(image, palette, histogram.Colormap, opts.Verbose || opts.Print);
 
             if (opts.Print)
             {
@@ -39,12 +68,51 @@ internal class Program
         }
         else if (opts.AsGPL)
         {
+
+            List<ColorHsv> colors = buckets.PaletteHsv().ToList();
+            
+            List<IMagickColor<byte>> palette2 = [];
+            
+            foreach (var color in colors)
+            {
+                var b = new Unicolour(ColourSpace.Hsb, color.H * 360, color.S, color.V).Rgb.Byte255;
+                palette2.Add(new MagickColor((byte)b.R, (byte)b.G, (byte)b.B));
+            }
+            
             List<string> file = Format.AsGpl(palette, Path.GetFileNameWithoutExtension(opts.OutputFile));
             File.WriteAllLines(opts.OutputFile, file);
         }
         else
         {
-            MagickImage paletteImage = Format.AsPng(palette);
+            if (opts.DisplayBins)
+            {
+
+                List<ColorHsv> colors2 = buckets.PaletteHsv().ToList();
+
+                List<IMagickColor<byte>> palette2 = [];
+                
+                foreach (var color in colors2)
+                {
+                    var b = new Unicolour(ColourSpace.Hsb, color.H * 360, color.S, color.V).Rgb.Byte255;
+                    palette2.Add(new MagickColor((byte)b.R, (byte)b.G, (byte)b.B));
+                }
+
+                using MagickImage bins = Format.AsPng2(palette2);
+                bins.Write(Console.OpenStandardOutput());
+                return;
+            }
+
+            using MagickImage paletteImage = Format.AsPng(palette);
+
+            if (opts.RemapImage)
+            {
+                var settings = new QuantizeSettings();
+                settings.ColorSpace = ColorSpace.Lab;
+                settings.DitherMethod = DitherMethod.FloydSteinberg;
+                originalImage.Remap(palette, settings);
+                originalImage.Write(Console.OpenStandardOutput());
+                return;
+            }
 
             if (opts.PrintImage)
             {
@@ -84,30 +152,18 @@ internal class Program
         return hasErrors;
     }
 
-    public static Tolerances? ReadTolerances(IConfigurationRoot config, bool verbose)
+    public static (Buckets, string) ReadBuckets(IConfigurationRoot config, bool verbose)
     {
-        Tolerances? tolerances = Config.GetTolerances(config.GetSection("Tolerances"));
-        if (tolerances is null)
+        (Buckets buckets, string errorMessage) = Config.GetBuckets(config.GetSection("Buckets"));
+
+        (bool bucketValid, string bucketMessage) = buckets.Validate();
+        if (!bucketValid)
         {
-            Console.WriteLine("Invalid or missing appsettings.json file.");
-            return tolerances;
+            Console.WriteLine(bucketMessage);
+            return (buckets, bucketMessage);
         }
 
-        if (verbose)
-        {
-            Console.WriteLine(Format.LineSeparator);
-            Console.WriteLine($"Tolerances:\n{tolerances}");
-            Console.WriteLine(Format.LineSeparator);
-        }
-
-        (bool tolValid, string tolMessage) = tolerances.Validate();
-        if (!tolValid)
-        {
-            Console.WriteLine(tolMessage);
-            return null;
-        }
-
-        return tolerances;
+        return (buckets, "");
     }
 
     private static void Main(string[] args)
@@ -126,23 +182,13 @@ internal class Program
                 .AddJsonFile("appsettings.json", optional: false)
                 .Build();
 
-            Tolerances? tolerances = ReadTolerances(config, opts.Verbose);
-            if (tolerances is null)
+            (Buckets buckets, string errorMessage) = ReadBuckets(config, opts.Verbose);
+            if (!string.IsNullOrEmpty(errorMessage))
             {
                 return;
             }
             
-            MagickImage inputImage = new();
-            
-            try
-            {
-                inputImage = new MagickImage(opts.InputFile);
-            }
-            catch (MagickException)
-            {
-                Console.WriteLine($"Input file: {opts.InputFile} does not exist or is not an image.");
-                return;
-            }
+            using MagickImage inputImage = new(opts.InputFile);
 
             if (opts.Print || opts.Verbose)
             {
@@ -150,18 +196,31 @@ internal class Program
                 Console.WriteLine(Format.LineSeparator);
             }
 
-            GeneratePalette(opts, inputImage, tolerances);
-        } 
-        catch (Exception e)
-        {
-            if (opts.Verbose)
+            inputImage.Settings.BackgroundColor = MagickColors.White;
+            inputImage.Alpha(AlphaOption.Remove);
+
+            if ( opts.ResizePercentage < 100 && opts.ResizePercentage > 0)
             {
-                Console.WriteLine(e);
+                using IMagickImage<byte> sampled = inputImage.Clone();
+                sampled.Sample(new Percentage(opts.ResizePercentage));
+                GeneratePalette(opts, sampled, buckets, inputImage);
             }
             else
             {
-                Console.WriteLine(e.Message);
+                GeneratePalette(opts, inputImage, buckets);
             }
+        }
+        catch (MagickBlobErrorException mbee)
+        {
+            HandleException(mbee, $"Input file: {opts.InputFile} does not exist or is not an image.", opts.Verbose);
+        }
+        catch (MagickMissingDelegateErrorException mmdee)
+        {
+            HandleException(mmdee, $"Input file: {opts.InputFile} does not exist or is not an image.", opts.Verbose);
+        }
+        catch (Exception e)
+        {
+            HandleException(e, e.Message, opts.Verbose);
         }
     }
 }

@@ -1,3 +1,5 @@
+using Lib.Analysis;
+
 namespace App.Io;
 
 public class Options
@@ -9,7 +11,7 @@ public class Options
 
     private static bool IsPairFlag(char flag)
     {
-        char[] flags = ['o', 'r'];
+        char[] flags = ['f', 'o', 'r'];
         return flags.Contains(flag);
     }
 
@@ -17,12 +19,18 @@ public class Options
     {
         switch (flag)
         {
+            case 'd':
+                DisplayBins = true;
+                break;
             case 'g':
                 AsGPL = true;
                 Print = false;
                 break;
             case 'h':
                 HistogramOnly = true;
+                break;
+            case 'm':
+                RemapImage = true;
                 break;
             case 'o':
                 Print = false;
@@ -47,6 +55,17 @@ public class Options
 
         switch (flag)
         {
+            case 'f':
+                if (Enum.TryParse(arg, true, out FilterStrength filterStrength))
+                {
+                    FilterLevel = filterStrength;
+                }
+                else
+                {
+                    mInvalidArg = $"{arg} is not a filter strength.";
+                    return;
+                }
+                break;
             case 'o':
                 OutputFile = arg;
                 break;
@@ -110,9 +129,12 @@ public class Options
         mInvalidArg = "";
 
         AsGPL = false;
+        DisplayBins = false;
+        FilterLevel = FilterStrength.Medium;
         InputFile = "";
         OutputFile = "";
         HistogramOnly = false;
+        RemapImage = false;
         Print = true;
         PrintImage = false;
         ResizePercentage = 100;
@@ -121,6 +143,10 @@ public class Options
 
     public bool AsGPL { get; set; }
 
+    public bool DisplayBins { get; set; }
+
+    public FilterStrength FilterLevel { get; set; }
+
     public string InputFile { get; set; }
 
     public string OutputFile { get; set; }
@@ -128,6 +154,8 @@ public class Options
     public bool HistogramOnly { get; set; }
 
     public string InvalidArg => mInvalidArg;
+
+    public bool RemapImage { get; set; }
 
     public bool Print { get; set; }
 
