@@ -4,27 +4,6 @@ namespace Lib.Colors;
 
 public static class ColorMath
 {
-    public static double CalculateNewMean(double mean, double count, double newValue)
-    {
-        double sum = mean * count;
-        return (sum + newValue) / (count + 1);
-    }
-
-    public static double AddMeans(double mean, double count, double otherMean, double otherCount)
-    {
-        double sum1 = mean * count;
-        double sum2 = otherMean * otherCount;
-        return (sum1 + sum2) / (count + otherCount);
-    }
-
-    public static T CalculateNewMean<T>(T mean, int count, T newColor) where T: IColorVector<double>
-    {
-        mean.X = CalculateNewMean(mean.X, count, newColor.X);
-        mean.Y = CalculateNewMean(mean.Y, count, newColor.Y);
-        mean.Z = CalculateNewMean(mean.Z, count, newColor.Z);
-        return mean;
-    }
-
     public static T AddMeans<T>(T mean, int count, T mean2, int count2) where T: IColorVector<double>
     {
         if (count == 0 && count2 == 0)
@@ -35,6 +14,28 @@ public static class ColorMath
         mean.X = AddMeans(mean.X, count, mean2.X, count2);
         mean.Y = AddMeans(mean.Y, count, mean2.Y, count2);
         mean.Z = AddMeans(mean.Z, count, mean2.Z, count2);
+        return mean;
+    }
+
+    public static double AddMeans(double mean, double count, double otherMean, double otherCount)
+    {
+        double sum1 = mean * count;
+        double sum2 = otherMean * otherCount;
+        return (sum1 + sum2) / (count + otherCount);
+    }
+
+    public static double CalculateNewMean(double mean, double count, double newValue)
+    {
+        double sum = mean * count;
+        return (sum + newValue) / (count + 1);
+    }
+
+
+    public static T CalculateNewMean<T>(T mean, int count, T newColor) where T: IColorVector<double>
+    {
+        mean.X = CalculateNewMean(mean.X, count, newColor.X);
+        mean.Y = CalculateNewMean(mean.Y, count, newColor.Y);
+        mean.Z = CalculateNewMean(mean.Z, count, newColor.Z);
         return mean;
     }
 

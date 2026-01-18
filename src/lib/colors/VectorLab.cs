@@ -8,7 +8,10 @@ namespace Lib.Colors;
 /// <param name="L">L</param>
 /// <param name="A">a</param>
 /// <param name="B">b</param>
-public record struct VectorLab(double L, double A, double B) : IComparable<VectorLab>, IColorVector<double>, IPackable<PackedLab>
+public record struct VectorLab(double L, double A, double B) : 
+    IComparable<VectorLab>,
+    IColorVector<double>,
+    IPackable<PackedLab>
 {
     public double X { readonly get => L; set => L = value; }
 

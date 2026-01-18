@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 
+using Lib.Analysis.Interfaces;
 using Lib.Colors;
 using Lib.Colors.Interfaces;
 using Lib.SimpleColor;
-using Lib.Analysis.Interfaces;
 
 namespace Lib.Analysis;
 
@@ -52,18 +52,11 @@ public abstract class KMeans<T, U> : IKMeans<T>
         foreach(var pixel in pixels)
         {
             UpdateBestCluster(Clusters, pixel, memoizedClusters);
-           // Console.WriteLine($"{bestClusterIndex} Count: {bestCluster.Count}");
         }
-
-        // foreach(var cluster in clusters.Where(c => c.Count > 0))
-        // {
-        //     Console.WriteLine(cluster);
-        // }
     }
 
     public virtual void ClusterParallel(SimpleColor.Rgb[] pixels)
     {
-        //Console.WriteLine("still running this");
         ConcurrentBag<T[]> bag = [];
         Parallel.ForEach(
             pixels,

@@ -36,11 +36,11 @@ internal class Program
         inputImage.Settings.BackgroundColor = MagickColors.White;
         inputImage.Alpha(AlphaOption.Remove);
 
-        Histogram histogram = Palette.CalculateHistogramFromSample(inputImage, tolerances, buckets);
+        HistogramLab histogram = Palette.CalculateHistogramFromSample(inputImage, tolerances, buckets);
         
         List<VectorLab> paletteLab = histogram
-            .PaletteWithFilter()
-            .Distinct()
+            .PaletteWithFilter(opts.FilterLevel)
+            .DistinctBy(e => e.Mean)
             .OrderByDescending(e => e.Count)
             .Select(c => c.Mean)
             .Take(16)
@@ -48,8 +48,10 @@ internal class Program
 
         if (paletteLab.Count < 16)
         {
-            paletteLab.AddRange(histogram.Palette().Where(p => !paletteLab.Contains(p.Mean)).Select(e => e.Mean));
+            paletteLab = paletteLab.Concat(histogram.Palette().Where(p => !paletteLab.Contains(p.Mean)).Select(e => e.Mean)).Take(16).ToList();
         }
+
+        //.WriteLine(histogram);
         //Console.WriteLine(histogram);
                 // var maxes = histogram.Results.OrderByDescending(h => h.Count).Where(h => h.Count > 0).Take(16).ToList();
         // List<IMagickColor<byte>> palette = maxes
@@ -61,7 +63,7 @@ internal class Program
 
         if (!opts.HistogramOnly)
         {
-            palette = Palette.FromImageKmeans(inputImage, palette, opts.Verbose || opts.Print);
+            palette = Palette.FromImageKmeans(inputImage, palette, histogram.Colormap, opts.Verbose || opts.Print);
 
             if (opts.Print)
             {
@@ -95,35 +97,51 @@ internal class Program
         }
         else
         {
-            List<SimpleColor.Hsv> colors2 = buckets.PaletteHsv().ToList();
-
-            List<IMagickColor<byte>> palette2 = [];
-            
-            foreach (var color in colors2)
+            if (opts.DisplayBins)
             {
-                var b = new Unicolour(ColourSpace.Hsb, color.H * 360, color.S, color.V).Rgb.Byte255;
-                palette2.Add(new MagickColor((byte)b.R, (byte)b.G, (byte)b.B));
+
+                List<SimpleColor.Hsv> colors2 = buckets.PaletteHsv().ToList();
+
+                List<IMagickColor<byte>> palette2 = [];
+                
+                foreach (var color in colors2)
+                {
+                    var b = new Unicolour(ColourSpace.Hsb, color.H * 360, color.S, color.V).Rgb.Byte255;
+                    palette2.Add(new MagickColor((byte)b.R, (byte)b.G, (byte)b.B));
+                }
+
+                using MagickImage bins = Format.AsPng2(palette2);
+                bins.Write(Console.OpenStandardOutput());
+                // TODO this is debug temporary stuff :)
+                return;
             }
 
             using MagickImage paletteImage = Format.AsPng(palette);
 
+            if (opts.RemapImage)
+            {
+                var settings = new QuantizeSettings();
+                settings.ColorSpace = ColorSpace.Lab;
+                settings.DitherMethod = DitherMethod.FloydSteinberg;
+                inputImage.Remap(palette, settings);
+                inputImage.Write(Console.OpenStandardOutput());
+
+                //TODO cleanup
+                return;
+            }
+
             if (opts.PrintImage)
             {
-                // var settings = new QuantizeSettings();
-                // settings.ColorSpace = ColorSpace.Lab;
-                // settings.DitherMethod = DitherMethod.FloydSteinberg;
-                // inputImage.Remap(palette, settings);
-                // inputImage.Write(Console.OpenStandardOutput());
                 paletteImage.Write(Console.OpenStandardOutput());
             }
             else
             {
-                var settings = new QuantizeSettings();
-                settings.DitherMethod = DitherMethod.FloydSteinberg;
-                settings.ColorSpace = ColorSpace.Lab;
-                inputImage.Remap(palette, settings);
-                inputImage.Write(opts.OutputFile);
-                //paletteImage.Write(opts.OutputFile);
+                // var settings = new QuantizeSettings();
+                // settings.DitherMethod = DitherMethod.FloydSteinberg;
+                // settings.ColorSpace = ColorSpace.Lab;
+                // inputImage.Remap(palette, settings);
+                // inputImage.Write(opts.OutputFile);
+                paletteImage.Write(opts.OutputFile);
             }
         }
     }

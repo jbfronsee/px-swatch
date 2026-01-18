@@ -1,5 +1,5 @@
-using Lib.Colors;
 using Lib.Analysis.Interfaces;
+using Lib.Colors;
 
 namespace Lib.Analysis;
 

@@ -1,12 +1,9 @@
+using ImageMagick;
+
 using SimpleColor = Lib.SimpleColor;
 using App.Extensions;
-using ImageMagick;
-using ImageMagick.Colors;
 using Lib.Analysis;
 using Lib.Colors;
-using Lib.Analysis.Interfaces;
-using System.Drawing;
-
 
 namespace App.Core;
 
@@ -32,13 +29,6 @@ public static class Palette
         }
 
         histogram.Cluster(pixels);
-
-        // var maxes = histogram.Results.OrderByDescending(h => h.Count).Where(h => h.Count > 0).Take(16).ToList();
-        // List<IMagickColor<byte>> palette = maxes
-        //     .Select(entry => Colors.Convert.ToHsv(entry.Mean))
-        //     .OrderBy(c => c)
-        //     .Select(c => new ColorHSV(c.H, c.S, c.V).ToMagickColor())
-        //     .ToList();
 
         return histogram;
     }
@@ -82,7 +72,6 @@ public static class Palette
 
         if (imageLength > largePixels)
         {
-            //Console.WriteLine("resized");
             using var sample = image.Clone();
             sample.Sample(new Percentage(100 / Math.Sqrt(imageLength / largePixels)));
             return CalculateHistogram(sample, tolerances, buckets);
@@ -167,8 +156,6 @@ public static class Palette
                 i++;
             }
         }
-
-        //Console.WriteLine("K means ready");
 
         return FromPixelsKmeans(pixels, seeds, colormap, verbose);
     }

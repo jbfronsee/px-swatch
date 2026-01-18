@@ -1,15 +1,35 @@
+using Lib.Analysis.Interfaces;
 using Lib.Colors;
 using Lib.Colors.Interfaces;
 using Lib.SimpleColor;
-using Lib.Analysis.Interfaces;
 
 namespace Lib.Analysis;
 
+public enum FilterStrength
+{
+    Undefined,
+
+    Low,
+    
+    Medium,
+
+    High
+}
+
+
 public abstract class Histogram<T, U>: KMeans<T, U>, IHistogram<T>
     where T: class, IEntry<U, T>
-    where U: IColorVector<double>
+    where U: IColorVector<double>, IEquatable<U>
 {
-    private const int BucketCount = 256;
+    protected const int BucketCount = 256;
+
+    protected const double OriginalEpsilonResolution = 1920 * 1080;
+
+    protected const double LowEpsilon = 1.5e-3 / OriginalEpsilonResolution;
+
+    protected const double MediumEpsilon = 1.5e-2 / OriginalEpsilonResolution;
+
+    protected const double HighEpsilon = 1.5e-1 / OriginalEpsilonResolution;
 
     public override T[] Clusters { get; set; } = new T[BucketCount];
 
@@ -29,7 +49,7 @@ public abstract class Histogram<T, U>: KMeans<T, U>, IHistogram<T>
         base.ClusterParallel(pixels);
     }
 
-    private List<T> Palette(T[] entries)
+    protected List<T> Palette(T[] entries)
     {
         List<T> matches = [];
         for (int i = 0, j = 1, k = 2; k < entries.Length; i++, j++, k++)
@@ -47,31 +67,25 @@ public abstract class Histogram<T, U>: KMeans<T, U>, IHistogram<T>
         return matches;
     }
 
+    protected double GetFilterEpsilon(FilterStrength strength)
+    {
+        return strength switch
+        {
+            FilterStrength.High => HighEpsilon * TotalPixelsCounted,
+            FilterStrength.Low => LowEpsilon * TotalPixelsCounted,
+            _ => MediumEpsilon * TotalPixelsCounted
+        };
+    }
+
     public List<T> Palette()
     {
         return Palette(Results);
     }
 
-    public List<T> PaletteWithFilter()
+    public List<T> PaletteWithFilter(FilterStrength strength = FilterStrength.Medium)
     {
-        T[] largeValues = Results.Where(e => e.Count > (0 + 1e-5)).ToArray();
+        T[] largeValues = Results.Where(e => e.Count > (TotalPixelsCounted * GetFilterEpsilon(strength))).ToArray();
         return Palette(largeValues);
-
-
-        //var maxes = Results.OrderByDescending(h => h.Count).Take(8).Select(c => c.Mean);
-        //return Results.Where(h => h.Count > 0).OrderBy(h => h.Count).Take(16).Select(c => c.Mean);
-
-        // double minDistance = double.MaxValue;
-        // double maxDistance = double.MinValue;
-        // foreach (var min in mins)
-        // {
-        //     foreach (var max in maxes)
-        //     {        
-        //         double distance = ColorMath.CalculateDistance(min.Mean, max.Mean);
-
-
-        //     }
-        // }
     }
 
     public override string ToString()
@@ -84,9 +98,6 @@ public abstract class Histogram<T, U>: KMeans<T, U>, IHistogram<T>
 
         return result;
     }
-    // {
-    //     return Colormap[pixel].Unpack();
-    // }
 }
 
 

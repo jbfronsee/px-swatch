@@ -8,5 +8,5 @@ public interface IHistogram<T>
 
     public List<T> Palette();
 
-    public List<T> PaletteWithFilter();
+    public List<T> PaletteWithFilter(FilterStrength filter = FilterStrength.Medium);
 }

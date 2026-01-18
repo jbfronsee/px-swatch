@@ -1,5 +1,6 @@
-using App.Core;
 using Microsoft.Extensions.Configuration;
+
+using App.Core;
 
 namespace App.Io;
 

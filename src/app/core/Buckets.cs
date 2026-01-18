@@ -1,6 +1,6 @@
-using SimpleColor = Lib.SimpleColor;
-
 using Wacton.Unicolour;
+
+using SimpleColor = Lib.SimpleColor;
 
 namespace App.Core;
 
@@ -28,27 +28,9 @@ public class Buckets
 
     public IEnumerable<Unicolour> Interpolated()
     {
-        //IEnumerable<Unicolour>[] quads = new IEnumerable<Unicolour>[4];
-        // for (int j = 0; j < quads.Length && (j + 1) < Points.Count; j++)
-        // {
-        //     BucketPoint bucket = Points[j], nextBucket = Points[j + 1];
-        //     // TODO change the added value at the end 
-        //     Unicolour start = new(ColourSpace.Hsb, hue, bucket.Saturation, bucket.Value);
-        //     if (j > 0)
-        //     {
-        //         start = new(ColourSpace.Hsb, hue, bucket.Saturation + .05, bucket.Value + 0.05);
-        //     }
-        //     Unicolour end = new(ColourSpace.Hsb, hue, nextBucket.Saturation, nextBucket.Value);
-            
-        //     quads[j] = start.Palette(end, ColourSpace.Hsb, bucket.Bins);
-        // }
-
-        // if group saturated
-
         List<Unicolour> palette = [];
         foreach (double hue in SaturatedHues)
         {
-            //double hue = i * (360 / 14);
             Unicolour start = new(ColourSpace.Hsb, hue, 1, .9);
             Unicolour end = new(ColourSpace.Hsb, hue, 1, .1);
             palette.AddRange(start.Palette(end, ColourSpace.Hsb, 12));
@@ -56,7 +38,6 @@ public class Buckets
 
         foreach (double hue in DesaturatedHues)
         {
-            //double hue = i * (360 / 14);
             Unicolour start = new(ColourSpace.Hsb, hue, .3, .9);
             Unicolour end = new(ColourSpace.Hsb, hue, .5, .20);
             palette.AddRange(start.Palette(end, ColourSpace.Hsb, 8));

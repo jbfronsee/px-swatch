@@ -1,10 +1,10 @@
-
-using Lib.Colors;
 using Lib.Analysis.Interfaces;
+using Lib.Colors;
 
 namespace Lib.Analysis;
 
-public abstract record SafeClusterLab<T> : ICluster<VectorLab, T>, IComparable<SafeClusterLab<T>> where T: ICluster<VectorLab, T>
+public abstract record SafeClusterLab<T> : ICluster<VectorLab, T>, IComparable<SafeClusterLab<T>>
+    where T: ICluster<VectorLab, T>
 {
     public SafeClusterLab(VectorLab cluster, VectorLab mean, int count)
     {
