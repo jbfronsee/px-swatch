@@ -72,7 +72,7 @@ public class Buckets
 
         if (DesaturatedHues.Count != 10)
         {
-            return (false, "Please specificy 12 Hues that will represent Histogram saturated hue ranges.");
+            return (false, "Please specificy 10 Hues that will represent Histogram desaturated hue ranges.");
         }
 
         return (true, "");

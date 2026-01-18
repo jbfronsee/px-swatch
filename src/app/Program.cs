@@ -99,7 +99,6 @@ internal class Program
 
                 using MagickImage bins = Format.AsPng2(palette2);
                 bins.Write(Console.OpenStandardOutput());
-                // TODO this is debug temporary stuff :)
                 return;
             }
 
@@ -112,8 +111,6 @@ internal class Program
                 settings.DitherMethod = DitherMethod.FloydSteinberg;
                 originalImage.Remap(palette, settings);
                 originalImage.Write(Console.OpenStandardOutput());
-
-                //TODO cleanup
                 return;
             }
 
@@ -158,26 +155,13 @@ internal class Program
     public static (Buckets, string) ReadBuckets(IConfigurationRoot config, bool verbose)
     {
         (Buckets buckets, string errorMessage) = Config.GetBuckets(config.GetSection("Buckets"));
-        // if (!buckets.Points.Any())
-        // {
-        //     string error = "Invalid or missing appsettings.json file.";
-        //     Console.WriteLine(error);
-        //     return (buckets, error);
-        // }
 
-        // if (verbose)
-        // {
-        //     Console.WriteLine(Format.LineSeparator);
-        //     Console.WriteLine($"Tolerances:\n{tolerances}");
-        //     Console.WriteLine(Format.LineSeparator);
-        // }
-
-        // (bool bucketValid, string bucketMessage) = buckets.Validate();
-        // if (!bucketValid)
-        // {
-        //     Console.WriteLine(bucketMessage);
-        //     return (buckets, bucketMessage);
-        // }
+        (bool bucketValid, string bucketMessage) = buckets.Validate();
+        if (!bucketValid)
+        {
+            Console.WriteLine(bucketMessage);
+            return (buckets, bucketMessage);
+        }
 
         return (buckets, "");
     }
